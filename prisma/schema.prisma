@@ -1,0 +1,113 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        String   @id @default(cuid())
+  username  String   @unique
+  email     String   @unique
+  password  String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  shortlinks Shortlink[]
+  linkLists  LinkList[]
+
+  @@index([username])
+  @@index([email])
+}
+
+model Shortlink {
+  id          String    @id @default(cuid())
+  userId      String
+  shortCode   String    @unique
+  originalUrl String
+  customAlias String?   @unique
+  description String?
+  tags        String    @default("")
+  expiresAt   DateTime?
+  clicks      Int       @default(0)
+  isActive    Boolean   @default(true)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  user      User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  analytics ClickAnalytics[]
+
+  @@index([shortCode])
+  @@index([customAlias])
+  @@index([userId])
+}
+
+model LinkList {
+  id              String   @id @default(cuid())
+  userId          String
+  title           String
+  slug            String   @unique
+  description     String?
+  profileImageUrl String?
+
+  theme           String   @default("light")
+  backgroundType  String   @default("solid")
+  backgroundValue String?
+  buttonStyle     String   @default("rounded")
+  buttonColor     String   @default("#000000")
+  textColor       String   @default("#ffffff")
+  fontFamily      String   @default("Inter")
+  layout          String   @default("center")
+  customCss       String?
+
+  views     Int      @default(0)
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user  User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  items ListItem[]
+
+  @@index([slug])
+  @@index([userId])
+}
+
+model ListItem {
+  id         String   @id @default(cuid())
+  listId     String
+  title      String
+  url        String
+  icon       String?
+  order      Int
+  clicks     Int      @default(0)
+  isVisible  Boolean  @default(true)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  list      LinkList         @relation(fields: [listId], references: [id], onDelete: Cascade)
+  analytics ClickAnalytics[]
+
+  @@index([listId])
+  @@index([order])
+}
+
+model ClickAnalytics {
+  id           String    @id @default(cuid())
+  shortlinkId  String?
+  listItemId   String?
+  ipAddress    String
+  userAgent    String
+  referrer     String?
+  country      String?
+  city         String?
+  clickedAt    DateTime  @default(now())
+
+  shortlink Shortlink? @relation(fields: [shortlinkId], references: [id], onDelete: Cascade)
+  listItem  ListItem?  @relation(fields: [listItemId], references: [id], onDelete: Cascade)
+
+  @@index([shortlinkId])
+  @@index([listItemId])
+  @@index([clickedAt])
+}
